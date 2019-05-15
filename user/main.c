@@ -87,6 +87,13 @@ int main(void)
 //    }
 //}
 
+
+void mqtt_sn_client_cyclic_cb2(void*arg)
+{
+    printf("Timr test\r\n");
+    TimerAdd(TIMER_MODE_SINGLE,1000,mqtt_sn_client_cyclic_cb2,0,0);
+}
+
 void TASK_TIMER_Test(void* pvParameters)
 {
     uint32_t systick,last,flag = 0;
@@ -96,11 +103,12 @@ void TASK_TIMER_Test(void* pvParameters)
     printf("CommInitFinished!\r\n");
     MQTTClientInit();
     mqtt_sn_client_pcb=GetClientPCB();
+    //TimerAdd(TIMER_MODE_SINGLE,1000,mqtt_sn_client_cyclic_cb2,0,0);
     while(1)
     {
         WDG_Kick();
         systick=xTaskGetTickCount();
-        TimerCheck(systick);
+        TimerCheck(systick);       
         if((systick%10000 == 0)&&registertopicfinsh())
         {
             if(flag==0)

@@ -29,10 +29,10 @@
 typedef void (* FUN_TIMER_CALLBACK_T)(void*arg);
 
 typedef struct {
-    uint16_t loop;
-    uint16_t Runing;
-    uint32_t load;
-    uint32_t current;
+    uint8_t loop;
+    uint8_t Runing;
+    uint32_t PrevTick;
+    uint32_t TimeOut;
     uint8_t  TimerID;
     void * arg;
     FUN_TIMER_CALLBACK_T timer_callback;

@@ -988,7 +988,7 @@ void api_disconnet_press(void *arg)
     uint8_t freamlenth=ReadClientImportindex(&mqtt_sn_client);
     
     #ifdef  DEBUG_CELIENT
-    printf("api_puback_press\r\n");
+    printf("api_disconnet_press\r\n");
     #endif
     if(freamlenth <= MQTT_SN_MAX_PACKET_LENGTH)
     {

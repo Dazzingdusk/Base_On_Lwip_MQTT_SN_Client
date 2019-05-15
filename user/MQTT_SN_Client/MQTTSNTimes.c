@@ -4,6 +4,9 @@
 #include "task.h"
 #include "stdio.h"
 
+#define _TIME_SUB_ABS(PrevTimeTick,NowTimeTick)             ((NowTimeTick)>=(PrevTimeTick)?(NowTimeTick)-(PrevTimeTick):(0xFFFFFFFF-(PrevTimeTick)+(NowTimeTick)))       
+#define _IS_TIME_OUT(PrevTimeTick,NowTimeTick,TimeOut)      ((_TIME_SUB_ABS((PrevTimeTick),(NowTimeTick)))>(TimeOut))?(1):(0)                                           \
+                                                               
 TIMER Systime;
 
 void TimerInit(void )
@@ -26,8 +29,8 @@ int32_t TimerAdd(uint8_t mode ,uint32_t timeout,FUN_TIMER_CALLBACK_T   cb,void* 
         if(Systime.Unused[num])
         {
             Systime.TIMER_T[num].loop = mode;
-            Systime.TIMER_T[num].current = xTaskGetTickCount()+timeout;
-            Systime.TIMER_T[num].load = timeout;
+            Systime.TIMER_T[num].TimeOut = timeout;
+            Systime.TIMER_T[num].PrevTick = xTaskGetTickCount();
             Systime.TIMER_T[num].Runing = TIMER_STATUS_RUNING;
             Systime.TIMER_T[num].timer_callback =  cb;
             Systime.TIMER_T[num].arg = arg;
@@ -96,8 +99,9 @@ int32_t TimerReload(uint8_t timerindex)
         return  ERROR_TIMER_UNUSED;
     }
 
-    Systime.TIMER_T[timerindex].current = xTaskGetTickCount()+Systime.TIMER_T[timerindex].load;
+    Systime.TIMER_T[timerindex].PrevTick = xTaskGetTickCount();
     #ifdef DEBUG
+    printf("Time is Reload\r\n");
     DebugPrint(timerindex);
     #endif
     return ERROR_TIMER_NONE;
@@ -127,21 +131,25 @@ int32_t TimerStop(uint8_t timerindex)
 
 int32_t GetTimerFreeNum(void)
 {
-    printf("The Free Time Num is %d\r\n",Systime.Free);
+    printf("The Free Time Num is %u\r\n",Systime.Free);
     return Systime.Free;
 }
 
 void DebugPrint(uint32_t timerindex)
 {
-    printf("Timer current is: %d\r\n",Systime.TIMER_T[timerindex].current);
-    printf("Timer load is:%d\r\n",Systime.TIMER_T[timerindex].load );
-    printf("Timer Runing is:%d\r\n",Systime.TIMER_T[timerindex].Runing);
-    printf("Timer loop is:%d\r\n",Systime.TIMER_T[timerindex].loop);
+    printf("Timer PrevTick is: %u\r\n",Systime.TIMER_T[timerindex].PrevTick);
+    printf("Timer TimeOut is:%u\r\n",Systime.TIMER_T[timerindex].TimeOut );
+    printf("Timer Runing is:%u\r\n",Systime.TIMER_T[timerindex].Runing);
+    printf("Timer loop is:%u\r\n",Systime.TIMER_T[timerindex].loop);
 }
 #endif
+
 void TimerCheck(uint32_t nowtimetick )
 {
     uint16_t num;
+    #ifdef FREERTOS
+    taskENTER_CRITICAL();
+    #endif    
     
     for(num=0;num < MAX_TIMER_NUM;num++)
     {
@@ -150,14 +158,15 @@ void TimerCheck(uint32_t nowtimetick )
            #ifdef DEBUG 
             //printf("Runing Time index is:%d\r\n",num);
            #endif
-            if( Systime.TIMER_T[num].current <= nowtimetick)
+            /**/
+            if( _IS_TIME_OUT(Systime.TIMER_T[num].PrevTick,nowtimetick,Systime.TIMER_T[num].TimeOut))
             {
                 Systime.TIMER_T[num].timer_callback(Systime.TIMER_T[num].arg);
                 
                 if(Systime.TIMER_T[num].loop == 1)
                 {
                     #ifdef DEBUG 
-                    printf("Runing Time Reload is:%d\r\n",TimerReload(num));
+                    printf("Runing Time Reload is:%u\r\n",TimerReload(num));
                     #else
                     TimerReload(num);
                     #endif
@@ -172,5 +181,8 @@ void TimerCheck(uint32_t nowtimetick )
             }
         }
     }
+    #ifdef FREERTOS
+    taskEXIT_CRITICAL();
+    #endif
 }
 
